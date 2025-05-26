@@ -1,7 +1,7 @@
 from flask import Flask, render_template, request, jsonify, send_from_directory
-from celery_worker import make_report
+from report_gen.celery_worker import make_report
 from celery.result import AsyncResult
-from celery_worker import celery
+from report_gen.celery_worker import celery
 
 app = Flask(__name__)
 
