@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Report Generator</title>
+    <style>
+        body { font-family: sans-serif; line-height: 1.6; padding: 2em; max-width: 600px; margin: auto; }
+        form { margin-top: 1em; }
+        input, button { font-size: 1em; padding: 0.5em; }
+    </style>
+</head>
+<body>
+    <h1>Create a New Report</h1>
+    <p>Enter some data and we will generate a report in the background.</p>
+    
+    <form id="reportForm">
+        <label for="user_data">Data for the report:</label><br>
+        <input type="text" id="user_data" name="user_data" value="Sample data" size="30">
+        <button type="submit">Generate Report</button>
+    </form>
+
+    <div id="result" style="margin-top: 1.5em;"></div>
+
+    <script>
+        document.getElementById('reportForm').addEventListener('submit', async function(e) {
+            e.preventDefault(); 
+            
+            const formData = new FormData(this);
+            const resultDiv = document.getElementById('result');
+            resultDiv.innerHTML = "Request sent. Waiting for the worker to process the task...";
+
+            const response = await fetch('/generate-report', {
+                method: 'POST',
+                body: formData
+            });
+
+            if (response.status === 202) {
+                const data = await response.json();
+                const taskId = data.task_id;
+                resultDiv.innerHTML = `Task queued with ID: ${taskId}. <br>Checking status...`;
+
+                const interval = setInterval(async () => {
+                    const statusResponse = await fetch(`/task-status/${taskId}`);
+                    const statusData = await statusResponse.json();
+                    
+                    resultDiv.innerHTML = `Task ID: ${taskId}. <br>Status: ${statusData.state}...`;
+                    
+                    if (statusData.state === 'SUCCESS') {
+                        clearInterval(interval);
+                        resultDiv.innerHTML = `Task complete! <br>
+                            <a href="${statusData.result}" target="_blank">Download your report</a>`;
+                    } else if (statusData.state === 'FAILURE') {
+                        clearInterval(interval);
+                        resultDiv.innerHTML = `Task failed. Please check the logs.`;
+                    }
+                }, 3000);
+            } else {
+                resultDiv.innerHTML = "Failed to start the task.";
+            }
+        });
+    </script>
+</body>
+</html>
